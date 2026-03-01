@@ -134,7 +134,7 @@
     </div>
 
     <div id="teamModal" class="absolute inset-0 z-[250] hidden flex-col items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity">
-        <div class="w-full max-w-4xl bg-minio-panel rounded-lg shadow-2xl border border-minio-border overflow-hidden m-4">
+        <div class="w-full max-w-5xl bg-minio-panel rounded-lg shadow-2xl border border-minio-border overflow-hidden m-4">
             <div class="p-4 border-b border-minio-border flex justify-between items-center bg-minio-sidebar shrink-0">
                 <h2 class="text-sm font-bold text-white flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2 text-indigo-400">
@@ -154,6 +154,7 @@
                         <tr>
                             <th class="px-6 py-3 font-bold tracking-wider">Employee Name</th>
                             <th class="px-6 py-3 font-bold tracking-wider">Role</th>
+                            <th class="px-6 py-3 font-bold tracking-wider">Buckets</th>
                             <th class="px-6 py-3 font-bold tracking-wider">Access Key</th>
                             <th class="px-6 py-3 text-right font-bold tracking-wider">Action</th>
                         </tr>
@@ -1095,7 +1096,7 @@
             document.getElementById('teamModal').classList.add('flex');
 
             const tbody = document.getElementById('employeeTableBody');
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-500 animate-pulse">Loading team registry...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 animate-pulse">Loading team registry...</td></tr>`;
 
             const adminEndpoint = localStorage.getItem('bv_endpoint').replace('-api', '-admin');
             const adminEdgeLink = await resolveEndpoint(adminEndpoint);
@@ -1112,10 +1113,16 @@
                         emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' : 
                         emp.role === 'view_upload' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-blue-900/50 text-blue-400';
 
+                    let bucketDisplay = '<span class="text-gray-500 italic text-[10px]">All Buckets</span>';
+                    if (emp.buckets && emp.buckets.length > 0) {
+                        bucketDisplay = emp.buckets.map(b => `<span class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-[10px] mr-1 inline-block mb-1">${b}</span>`).join('');
+                    }
+
                     tbody.innerHTML += `
                         <tr class="border-b border-gray-800 hover:bg-gray-800/50">
                             <td class="px-6 py-4 font-bold text-white">${emp.name}</td>
                             <td class="px-6 py-4"><span class="${roleColor} px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">${emp.role || 'view_upload_delete'}</span></td>
+                            <td class="px-6 py-4 flex flex-wrap gap-1 max-w-[200px]">${bucketDisplay}</td>
                             <td class="px-6 py-4 font-mono text-[10px] text-gray-500">${emp.access_key}</td>
                             <td class="px-6 py-4 text-right">
                                 <button onclick="revokeEmployee('${emp.access_key}')" class="text-xs font-bold text-red-500 border border-red-900/40 hover:text-white bg-red-900/10 hover:bg-red-600 px-4 py-1.5 rounded transition-colors">Revoke</button>
@@ -1124,7 +1131,7 @@
                     `;
                 }
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Failed to load team data.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-500">Failed to load team data.</td></tr>`;
             }
         }
 
