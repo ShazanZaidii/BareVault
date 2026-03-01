@@ -148,21 +148,8 @@
                     </svg>
                 </button>
             </div>
-            <div class="p-0 max-h-[60vh] overflow-y-auto">
-                <table class="w-full text-left text-sm text-gray-300">
-                    <thead class="text-[10px] uppercase bg-gray-800 text-gray-400 sticky top-0">
-                        <tr>
-                            <th class="px-6 py-3 font-bold tracking-wider">Employee Name</th>
-                            <th class="px-6 py-3 font-bold tracking-wider">Role</th>
-                            <th class="px-6 py-3 font-bold tracking-wider">Buckets</th>
-                            <th class="px-6 py-3 font-bold tracking-wider">Access Key</th>
-                            <th class="px-6 py-3 text-right font-bold tracking-wider">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="employeeTableBody">
-                    </tbody>
-                </table>
-            </div>
+            <div id="teamModalContent" class="p-0 max-h-[65vh] overflow-y-auto bg-minio-bg relative">
+                </div>
         </div>
     </div>
 
@@ -373,6 +360,10 @@
         let isAdminGlobal = false;
         let canUpload = false;
         let canDelete = false;
+        
+        let currentEmployees = [];
+        let currentBucketMap = {};
+        let currentBucketSort = 'recent';
 
         function togglePassword() {
             const input = document.getElementById('secretKey');
@@ -1095,8 +1086,8 @@
             document.getElementById('teamModal').classList.remove('hidden');
             document.getElementById('teamModal').classList.add('flex');
 
-            const tbody = document.getElementById('employeeTableBody');
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-500 animate-pulse">Loading team registry...</td></tr>`;
+            const container = document.getElementById('teamModalContent');
+            container.innerHTML = `<div class="text-center py-8 text-gray-500 animate-pulse">Loading team registry...</div>`;
 
             const adminEndpoint = localStorage.getItem('bv_endpoint').replace('-api', '-admin');
             const adminEdgeLink = await resolveEndpoint(adminEndpoint);
@@ -1105,34 +1096,162 @@
                 const res = await fetch(adminEdgeLink + '/api/employees/list', {
                     headers: { 'Authorization': 'Bearer ' + localStorage.getItem('bv_secret') }
                 });
-                const employees = await res.json();
+                const employeesObj = await res.json();
 
-                tbody.innerHTML = '';
-                for (const [key, emp] of Object.entries(employees)) {
-                    let roleColor = emp.role === 'admin' ? 'bg-red-900/50 text-red-400' :
-                        emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' : 
-                        emp.role === 'view_upload' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-blue-900/50 text-blue-400';
+                currentEmployees = Object.entries(employeesObj).map(([key, emp]) => ({
+                    ...emp,
+                    _addedAt: new Date(emp.added_at || 0).getTime()
+                }));
 
-                    let bucketDisplay = '<span class="text-gray-500 italic text-[10px]">All Buckets</span>';
-                    if (emp.buckets && emp.buckets.length > 0) {
-                        bucketDisplay = emp.buckets.map(b => `<span class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-[10px] mr-1 inline-block mb-1">${b}</span>`).join('');
-                    }
+                // Default sort: order they redeemed (chronological ascending)
+                currentEmployees.sort((a, b) => a._addedAt - b._addedAt);
 
-                    tbody.innerHTML += `
-                        <tr class="border-b border-gray-800 hover:bg-gray-800/50">
-                            <td class="px-6 py-4 font-bold text-white">${emp.name}</td>
-                            <td class="px-6 py-4"><span class="${roleColor} px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">${emp.role || 'view_upload_delete'}</span></td>
-                            <td class="px-6 py-4 flex flex-wrap gap-1 max-w-[200px]">${bucketDisplay}</td>
-                            <td class="px-6 py-4 font-mono text-[10px] text-gray-500">${emp.access_key}</td>
-                            <td class="px-6 py-4 text-right">
-                                <button onclick="revokeEmployee('${emp.access_key}')" class="text-xs font-bold text-red-500 border border-red-900/40 hover:text-white bg-red-900/10 hover:bg-red-600 px-4 py-1.5 rounded transition-colors">Revoke</button>
-                            </td>
-                        </tr>
-                    `;
+                currentBucketMap = {};
+                let maxInAnyBucket = 0;
+
+                currentEmployees.forEach(emp => {
+                    const buckets = (emp.buckets && emp.buckets.length > 0) ? emp.buckets : ["All Buckets"];
+                    buckets.forEach(b => {
+                        if (!currentBucketMap[b]) currentBucketMap[b] = [];
+                        currentBucketMap[b].push(emp);
+                        if (currentBucketMap[b].length > maxInAnyBucket) {
+                            maxInAnyBucket = currentBucketMap[b].length;
+                        }
+                    });
+                });
+
+                if (maxInAnyBucket >= 2) {
+                    renderBucketView(currentBucketSort);
+                } else {
+                    renderTableView();
                 }
             } catch (error) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-500">Failed to load team data.</td></tr>`;
+                container.innerHTML = `<div class="text-center py-8 text-red-500">Failed to load team data.</div>`;
             }
+        }
+
+        function renderTableView() {
+            const container = document.getElementById('teamModalContent');
+            let html = `
+                <table class="w-full text-left text-sm text-gray-300">
+                    <thead class="text-[10px] uppercase bg-gray-800 text-gray-400 sticky top-0 z-10 shadow-md">
+                        <tr>
+                            <th class="px-6 py-3 font-bold tracking-wider">Employee Name</th>
+                            <th class="px-6 py-3 font-bold tracking-wider">Role</th>
+                            <th class="px-6 py-3 font-bold tracking-wider">Buckets</th>
+                            <th class="px-6 py-3 font-bold tracking-wider">Access Key</th>
+                            <th class="px-6 py-3 text-right font-bold tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            currentEmployees.forEach(emp => {
+                let roleColor = emp.role === 'admin' ? 'bg-red-900/50 text-red-400' :
+                    emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' : 
+                    emp.role === 'view_upload' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-blue-900/50 text-blue-400';
+
+                let bucketDisplay = '<span class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-[10px] italic text-gray-400">All Buckets</span>';
+                if (emp.buckets && emp.buckets.length > 0) {
+                    bucketDisplay = emp.buckets.map(b => `<span class="bg-gray-800 border border-gray-700 px-2 py-0.5 rounded text-[10px] mr-1 inline-block mb-1">${b}</span>`).join('');
+                }
+
+                html += `
+                    <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
+                        <td class="px-6 py-4 font-bold text-white">${emp.name}</td>
+                        <td class="px-6 py-4"><span class="${roleColor} px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold">${emp.role || 'view_upload_delete'}</span></td>
+                        <td class="px-6 py-4 flex flex-wrap gap-1 max-w-[200px]">${bucketDisplay}</td>
+                        <td class="px-6 py-4 font-mono text-[10px] text-gray-500">${emp.access_key}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="revokeEmployee('${emp.access_key}')" class="text-xs font-bold text-red-500 border border-red-900/40 hover:text-white bg-red-900/10 hover:bg-red-600 px-4 py-1.5 rounded transition-colors">Revoke</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        function renderBucketView(sortType) {
+            currentBucketSort = sortType;
+            const container = document.getElementById('teamModalContent');
+            
+            let buckets = Object.keys(currentBucketMap).map(name => {
+                const emps = currentBucketMap[name];
+                const mostRecent = Math.max(...emps.map(e => e._addedAt));
+                return { name, emps, mostRecent };
+            });
+
+            if (sortType === 'name') {
+                buckets.sort((a, b) => a.name.localeCompare(b.name));
+            } else if (sortType === 'employees') {
+                buckets.sort((a, b) => b.emps.length - a.emps.length);
+            } else {
+                buckets.sort((a, b) => b.mostRecent - a.mostRecent);
+            }
+
+            let html = `
+                <div class="p-3 bg-gray-900 border-b border-minio-border flex justify-between items-center sticky top-0 z-20 shadow-md">
+                    <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest flex items-center px-3">
+                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                        Grouped By Bucket
+                    </span>
+                    <select onchange="renderBucketView(this.value)" class="bg-minio-bg border border-minio-border rounded text-[11px] font-bold text-gray-300 py-1.5 px-3 focus:outline-none focus:border-indigo-500 cursor-pointer transition-colors mr-3">
+                        <option value="recent" ${sortType === 'recent' ? 'selected' : ''}>Sort: Most Recent</option>
+                        <option value="employees" ${sortType === 'employees' ? 'selected' : ''}>Sort: Most Employees</option>
+                        <option value="name" ${sortType === 'name' ? 'selected' : ''}>Sort: Bucket Name (A-Z)</option>
+                    </select>
+                </div>
+                <div class="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 items-start pb-10">
+            `;
+
+            buckets.forEach(b => {
+                let badgeClass = b.name === 'All Buckets' ? 'bg-red-900/30 text-red-400 border-red-900/50' : 'bg-indigo-900/30 text-indigo-400 border-indigo-900/50';
+                
+                html += `
+                    <div class="bg-minio-bg border border-minio-border rounded-lg overflow-hidden shadow-lg h-fit">
+                        <div class="px-4 py-3 bg-gray-800/40 border-b border-minio-border flex justify-between items-center">
+                            <span class="font-bold text-white text-sm flex items-center truncate mr-3">
+                                <svg class="w-4 h-4 mr-2 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+                                <span class="truncate">${b.name}</span>
+                            </span>
+                            <span class="text-[10px] font-bold border ${badgeClass} px-2 py-0.5 rounded-full whitespace-nowrap">${b.emps.length} Mem${b.emps.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="divide-y divide-gray-800 max-h-[300px] overflow-y-auto">
+                `;
+                
+                b.emps.forEach((emp, index) => {
+                    let roleColor = emp.role === 'admin' ? 'text-red-400' :
+                            emp.role === 'view_upload_delete' ? 'text-green-400' : 
+                            emp.role === 'view_upload' ? 'text-indigo-400' : 'text-blue-400';
+
+                    html += `
+                        <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-800/40 transition-colors">
+                            <div class="flex flex-col truncate mr-3">
+                                <span class="text-xs font-bold text-gray-200 truncate flex items-center">
+                                    <span class="text-gray-600 font-mono text-[9px] mr-1.5">${index + 1}.</span>
+                                    ${emp.name}
+                                </span>
+                                <span class="text-[10px] font-mono text-gray-500 mt-1 truncate">
+                                    <span class="uppercase font-bold ${roleColor} text-[9px] border border-gray-700 bg-gray-800 px-1 py-0.5 rounded mr-1.5">${emp.role || 'view_upload_delete'}</span> 
+                                    ${emp.access_key}
+                                </span>
+                            </div>
+                            <button onclick="revokeEmployee('${emp.access_key}')" title="Revoke Access" class="text-gray-500 hover:text-red-400 bg-transparent hover:bg-red-900/20 p-1.5 rounded transition-colors shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                </svg>
+                            </button>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            });
+
+            html += `</div>`;
+            container.innerHTML = html;
         }
 
         async function revokeEmployee(accessKey) {
