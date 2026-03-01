@@ -74,7 +74,7 @@ type Employee struct {
 	AccessKey string   `json:"access_key"`
 	SecretKey string   `json:"secret_key"`
 	Role      string   `json:"role"`
-	Buckets   []string `json:"buckets"` // <--- THIS WAS THE MISSING FIELD
+	Buckets   []string `json:"buckets"`
 	AddedAt   string   `json:"added_at"`
 }
 
@@ -87,6 +87,27 @@ func generateRandomString(length int) string {
 	b := make([]byte, length)
 	rand.Read(b)
 	return hex.EncodeToString(b)[:length]
+}
+
+// --- SMART TUNNEL RETRY LOGIC ---
+func getTunnelWithRetry(ctx context.Context, binDir, port, tag string) string {
+	for i := 0; i < 4; i++ {
+		attemptCtx, cancelAttempt := context.WithCancel(ctx)
+		urlChan := make(chan string)
+
+		go runTunnel(attemptCtx, binDir, port, tag, urlChan)
+
+		select {
+		case url := <-urlChan:
+			return url
+		case <-time.After(12 * time.Second):
+			fmt.Printf("   [%s] Cloudflare rejected connection (IP Block). Retrying in 5s...\n", tag)
+			cancelAttempt() // Kill this specific hung cloudflared process
+			time.Sleep(5 * time.Second)
+		}
+	}
+	log.Fatalf("\nFATAL: Cloudflare permanently blocked anonymous tunnels on this network. Please connect to a Mobile Hotspot or VPN and try again.")
+	return ""
 }
 
 func main() {
@@ -342,43 +363,16 @@ func main() {
 	go startAdminAPI(adminPort, apiPort, profile)
 
 	fmt.Println("\nNegotiating Secure Web Tunnel (1/3)...")
-	webURLChan := make(chan string)
-	go runTunnel(ctx, binDir, consolePort, "WEB", webURLChan)
-
-	var webTunnelURL string
-	select {
-	case webTunnelURL = <-webURLChan:
-		fmt.Println("   Web Tunnel established!")
-	case <-time.After(30 * time.Second):
-		log.Fatalf("\nTIMEOUT: Web Tunnel failed to connect. Try running 'killall cloudflared'")
-	}
-
-	fmt.Println("   [Sleeping 8 seconds to clear Cloudflare anti-spam monitors...]")
-	time.Sleep(8 * time.Second)
+	webTunnelURL := getTunnelWithRetry(ctx, binDir, consolePort, "WEB")
+	fmt.Println("   Web Tunnel established!")
 
 	fmt.Println("Negotiating Secure API Tunnel (2/3)...")
-	apiURLChan := make(chan string)
-	go runTunnel(ctx, binDir, apiPort, "API", apiURLChan)
-
-	var apiTunnelURL string
-	select {
-	case apiTunnelURL = <-apiURLChan:
-		fmt.Println("   API Tunnel established!")
-	case <-time.After(30 * time.Second):
-		log.Fatalf("\nTIMEOUT: API Tunnel failed to connect.")
-	}
+	apiTunnelURL := getTunnelWithRetry(ctx, binDir, apiPort, "API")
+	fmt.Println("   API Tunnel established!")
 
 	fmt.Println("Negotiating Secure Admin Tunnel (3/3)...")
-	adminURLChan := make(chan string)
-	go runTunnel(ctx, binDir, adminPort, "ADMIN", adminURLChan)
-
-	var adminTunnelURL string
-	select {
-	case adminTunnelURL = <-adminURLChan:
-		fmt.Println("   Admin Tunnel established!")
-	case <-time.After(30 * time.Second):
-		log.Fatalf("\nTIMEOUT: Admin Tunnel failed to connect.")
-	}
+	adminTunnelURL := getTunnelWithRetry(ctx, binDir, adminPort, "ADMIN")
+	fmt.Println("   Admin Tunnel established!")
 
 	hardwareSecret := generateDeterministicHash(baseID + "_master_lock")[:16]
 
@@ -863,7 +857,7 @@ func startAdminAPI(port string, apiPort string, profile VaultProfile) {
 			AccessKey: newAccessKey,
 			SecretKey: newSecretKey,
 			Role:      invite.Policy,
-			Buckets:   invite.Buckets, // <---- THIS MAKES IT WORK
+			Buckets:   invite.Buckets, 
 			AddedAt:   time.Now().Format(time.RFC3339),
 		}
 
