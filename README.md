@@ -12,6 +12,19 @@ BareVault turns any local folder into a secure, globally accessible, S3-compatib
 
 ---
 
+
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/d7e551f5-9b6d-4f53-a568-ecf1ed7c22b1" />
+
+
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/c452e4ff-853d-4c50-8238-41afbd7d7275" />
+
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/b80aa349-cab6-4a8a-ada8-9cf7c917ca0f" />
+
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/a2ba1b03-6628-46b8-bb1e-83b3de98c374" />
+
+
+
+
 ## ✨ Key Features
 
 * **Global Edge Routing-**<br>
@@ -45,3 +58,6 @@ Press `Window Key + V` this will prompt you to enable clipboard if you haven't a
 
 ### --> Mac:
 Press `Cmd + Spacebar` to first open spotlight and then `Command + 4` to switch to clipboard.
+
+
+
