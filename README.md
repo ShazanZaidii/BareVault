@@ -16,11 +16,7 @@ BareVault turns any local folder into a secure, globally accessible, S3-compatib
 <img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/d7e551f5-9b6d-4f53-a568-ecf1ed7c22b1" />
 
 
-<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/c452e4ff-853d-4c50-8238-41afbd7d7275" />
 
-<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/b80aa349-cab6-4a8a-ada8-9cf7c917ca0f" />
-
-<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/a2ba1b03-6628-46b8-bb1e-83b3de98c374" />
 
 
 
@@ -32,7 +28,7 @@ BareVault turns any local folder into a secure, globally accessible, S3-compatib
 
 * **Granular IAM & Team Access:**<br>
   Generate secure, expiring invite links directly from the dashboard. Assign precise roles (`Admin`, `View/Upload/Delete`, `Read-Only`) and restrict users to specific buckets.
-
+  
 * **Universal Web Client:**<br>
   Manage all your vaults through a single, professionally designed AWS-style dashboard hosted on GitHub Pages. Features include bulk ZIP downloads, in-browser media previews, and drag-and-drop uploads.
 
@@ -42,6 +38,7 @@ BareVault turns any local folder into a secure, globally accessible, S3-compatib
 * **Smart Self-Healing Tunnels:**<br>
   Built-in connection management detects Cloudflare IP rate-limits and intelligently retries, ensuring your vault stays online.
 ---
+
 
 ## Quick Start
 
@@ -58,6 +55,10 @@ Press `Window Key + V` this will prompt you to enable clipboard if you haven't a
 
 ### --> Mac:
 Press `Cmd + Spacebar` to first open spotlight and then `Command + 4` to switch to clipboard.
+<hr>
 
 
-
+### Screenshots:
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/c452e4ff-853d-4c50-8238-41afbd7d7275" />
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/b80aa349-cab6-4a8a-ada8-9cf7c917ca0f" />
+<img width="1496" height="967" alt="image" src="https://github.com/user-attachments/assets/616045dd-a867-4e95-bac3-ab7ff25e2a42" />
