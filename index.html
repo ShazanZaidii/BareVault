@@ -1103,7 +1103,7 @@
                     _addedAt: new Date(emp.added_at || 0).getTime()
                 }));
 
-                // Strict Chronological Sort (Oldest first / order they joined)
+                // Default sort: order they redeemed (chronological ascending)
                 currentEmployees.sort((a, b) => a._addedAt - b._addedAt);
 
                 currentBucketMap = {};
@@ -1111,16 +1111,14 @@
 
                 currentEmployees.forEach(emp => {
                     let buckets = [];
-                    // Safely parse old and new formats
                     if (emp.role === 'admin') {
                         buckets = ["* (All Buckets)"];
                     } else if (emp.buckets && Array.isArray(emp.buckets) && emp.buckets.length > 0) {
                         buckets = emp.buckets;
                     } else {
-                        buckets = ["* (All Buckets)"]; // Fallback for pre-update data
+                        buckets = ["* (All Buckets)"]; 
                     }
 
-                    // Store on object for fallback table view
                     emp._displayBuckets = buckets;
 
                     buckets.forEach(b => {
@@ -1146,7 +1144,7 @@
             const container = document.getElementById('teamModalContent');
             let html = `
                 <table class="w-full text-left text-sm text-gray-300">
-                    <thead class="text-[10px] uppercase bg-[#0a0f1c] text-gray-400 sticky top-0 z-10 shadow-sm border-b border-minio-border">
+                    <thead class="text-[10px] uppercase bg-[#0a0f1c] text-gray-500 sticky top-0 z-10 shadow-sm border-b border-minio-border">
                         <tr>
                             <th class="px-6 py-3 font-semibold tracking-wider">Employee Name</th>
                             <th class="px-6 py-3 font-semibold tracking-wider">Role</th>
@@ -1195,7 +1193,6 @@
             
             let buckets = Object.keys(currentBucketMap).map(name => {
                 const emps = currentBucketMap[name];
-                // Math.max calculates the highest timestamp (the most recently added employee in this group)
                 const mostRecent = Math.max(...emps.map(e => e._addedAt));
                 return { name, emps, mostRecent };
             });
@@ -1220,32 +1217,37 @@
                         <option value="name" ${sortType === 'name' ? 'selected' : ''}>Sort: Bucket Name (A-Z)</option>
                     </select>
                 </div>
-                <div class="p-6 space-y-6 pb-10 bg-minio-bg">
+                <div class="overflow-x-auto pb-10">
+                    <table class="w-full text-left text-sm text-gray-300">
+                        <thead class="text-[10px] uppercase bg-gray-900/50 text-gray-500 hidden sm:table-header-group">
+                            <tr>
+                                <th class="px-6 py-3 font-semibold">Employee Name</th>
+                                <th class="px-6 py-3 font-semibold">Role</th>
+                                <th class="px-6 py-3 font-semibold">Access Key</th>
+                                <th class="px-6 py-3 text-right font-semibold">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800/50">
             `;
 
             buckets.forEach(b => {
-                let badgeClass = (b.name === '* (All Buckets)' || b.name === 'All Buckets') ? 'text-red-400' : 'text-indigo-400';
-                let iconColor = (b.name === '* (All Buckets)' || b.name === 'All Buckets') ? 'text-red-400/70' : 'text-indigo-400/70';
+                let isAll = (b.name === '* (All Buckets)' || b.name === 'All Buckets');
+                let bucketLabel = isAll ? 'Global Access (All Buckets)' : `Bucket: ${b.name}`;
+                let labelColor = isAll ? 'text-red-400' : 'text-indigo-400';
+                let iconColor = isAll ? 'text-red-500' : 'text-indigo-500';
                 
                 html += `
-                    <div class="bg-minio-panel border border-minio-border rounded-lg overflow-hidden shadow-md">
-                        <div class="px-5 py-3 bg-gray-800/30 border-b border-minio-border flex justify-between items-center">
-                            <span class="font-bold text-white text-sm flex items-center">
-                                <svg class="w-4 h-4 mr-2 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
-                                <span class="${badgeClass}">${b.name}</span>
-                            </span>
-                            <span class="text-xs text-gray-400 font-medium">${b.emps.length} Member${b.emps.length !== 1 ? 's' : ''}</span>
-                        </div>
-                        <table class="w-full text-left text-sm text-gray-300">
-                            <thead class="text-[10px] uppercase bg-[#0a0f1c] text-gray-500">
-                                <tr>
-                                    <th class="px-5 py-2.5 font-semibold">Employee Name</th>
-                                    <th class="px-5 py-2.5 font-semibold">Role</th>
-                                    <th class="px-5 py-2.5 font-semibold hidden sm:table-cell">Access Key</th>
-                                    <th class="px-5 py-2.5 text-right font-semibold">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-800/50">
+                    <tr class="bg-[#0f1423] border-y border-minio-border">
+                        <td colspan="4" class="px-6 py-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold ${labelColor} flex items-center uppercase tracking-wider">
+                                    <svg class="w-3.5 h-3.5 mr-2 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" /></svg>
+                                    ${bucketLabel}
+                                </span>
+                                <span class="text-[10px] font-bold bg-gray-900 px-2 py-0.5 rounded text-gray-400">${b.emps.length} Member${b.emps.length !== 1 ? 's' : ''}</span>
+                            </div>
+                        </td>
+                    </tr>
                 `;
                 
                 b.emps.forEach((emp, index) => {
@@ -1257,23 +1259,21 @@
 
                     html += `
                         <tr class="hover:bg-gray-800/30 transition-colors">
-                            <td class="px-5 py-3 font-medium text-gray-200 flex items-center">
+                            <td class="px-6 py-3 font-medium text-gray-200 flex items-center">
                                 <span class="text-gray-600 font-mono text-[10px] mr-2 w-4 text-right">${index + 1}.</span>
                                 ${emp.name}
                             </td>
-                            <td class="px-5 py-3"><span class="${roleColor} px-2 py-1 rounded text-[9px] uppercase tracking-wider font-bold">${roleName}</span></td>
-                            <td class="px-5 py-3 font-mono text-[10px] text-gray-500 hidden sm:table-cell">${emp.access_key}</td>
-                            <td class="px-5 py-3 text-right">
+                            <td class="px-6 py-3"><span class="${roleColor} px-2 py-1 rounded text-[9px] uppercase tracking-wider font-bold">${roleName}</span></td>
+                            <td class="px-6 py-3 font-mono text-[10px] text-gray-500">${emp.access_key}</td>
+                            <td class="px-6 py-3 text-right">
                                 <button onclick="revokeEmployee('${emp.access_key}')" class="text-[11px] font-bold text-red-500 border border-red-900/40 hover:text-white hover:bg-red-600 px-3 py-1.5 rounded transition-colors">Revoke</button>
                             </td>
                         </tr>
                     `;
                 });
-
-                html += `</tbody></table></div>`;
             });
 
-            html += `</div>`;
+            html += `</tbody></table></div>`;
             container.innerHTML = html;
         }
 
