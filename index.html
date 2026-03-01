@@ -42,7 +42,7 @@
             <h2 class="text-xl font-bold text-white mb-4">Create New Bucket</h2>
             <div class="mb-5">
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Bucket Name</label>
-                <input type="text" id="newBucketName" oninput="validateBucketName()"
+                <input type="text" id="newBucketName" oninput="validateBucketName()" onkeydown="if(event.key === 'Enter' && !document.getElementById('confirmCreateBucketBtn').disabled) { event.preventDefault(); submitCreateBucket(); }"
                     class="w-full bg-minio-bg border border-minio-border rounded p-3 text-sm text-white focus:border-indigo-500 focus:outline-none transition-colors"
                     placeholder="e.g. my-app-data">
                 <p id="bucketValidationMsg" class="text-xs text-gray-500 mt-2 flex items-start"></p>
@@ -74,7 +74,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
                             </svg>
                         </button>
-                        <input type="number" id="inviteMaxUses" value="5" min="1"
+                        <input type="number" id="inviteMaxUses" value="5" min="1" onkeydown="if(event.key === 'Enter') { event.preventDefault(); submitGenerateInvite(); }"
                             class="flex-1 w-full bg-transparent p-3 text-sm text-center text-white focus:outline-none appearance-none m-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
                         <button onclick="document.getElementById('inviteMaxUses').stepUp()"
                             class="px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors border-l border-minio-border">
@@ -223,15 +223,15 @@
 
                 <div class="space-y-4">
                     <div>
-                        <input type="text" id="endpointUrl" placeholder="API Endpoint (e.g., https://...)"
+                        <input type="text" id="endpointUrl" placeholder="API Endpoint (e.g., https://...)" onkeydown="if(event.key === 'Enter') authenticate()"
                             class="w-full bg-transparent border border-minio-border rounded p-3 text-sm focus:border-minio-accent focus:outline-none transition-colors">
                     </div>
                     <div>
-                        <input type="text" id="accessKey" placeholder="Access Key"
+                        <input type="text" id="accessKey" placeholder="Access Key" onkeydown="if(event.key === 'Enter') authenticate()"
                             class="w-full bg-transparent border border-minio-border rounded p-3 text-sm focus:border-minio-accent focus:outline-none transition-colors">
                     </div>
                     <div class="relative">
-                        <input type="password" id="secretKey" placeholder="Secret Key"
+                        <input type="password" id="secretKey" placeholder="Secret Key" onkeydown="if(event.key === 'Enter') authenticate()"
                             class="w-full bg-transparent border border-minio-border rounded p-3 text-sm focus:border-minio-accent focus:outline-none transition-colors pr-12">
                         <button onclick="togglePassword()"
                             class="absolute inset-y-0 right-0 px-4 flex items-center text-gray-500 hover:text-gray-300 focus:outline-none">
@@ -1228,7 +1228,7 @@
                     } else if (emp.buckets && Array.isArray(emp.buckets) && emp.buckets.length > 0) {
                         buckets = emp.buckets;
                     } else {
-                        buckets = ["* (All Buckets)"];
+                        buckets = ["* (All Buckets)"]; 
                     }
 
                     emp._displayBuckets = buckets;
@@ -1270,8 +1270,8 @@
 
             currentEmployees.forEach(emp => {
                 let roleColor = emp.role === 'admin' ? 'bg-red-900/50 text-red-400' :
-                    emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' :
-                        emp.role === 'view_upload' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-blue-900/50 text-blue-400';
+                    emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' : 
+                    emp.role === 'view_upload' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-blue-900/50 text-blue-400';
 
                 let bucketDisplay = '';
                 emp._displayBuckets.forEach(b => {
@@ -1294,7 +1294,7 @@
                     </tr>
                 `;
             });
-
+            
             html += `</tbody></table>`;
             container.innerHTML = html;
         }
@@ -1302,9 +1302,10 @@
         function renderBucketView(sortType) {
             currentBucketSort = sortType;
             const container = document.getElementById('teamModalContent');
-
+            
             let buckets = Object.keys(currentBucketMap).map(name => {
                 const emps = currentBucketMap[name];
+                // Math.max calculates the highest timestamp (the most recently added employee in this group)
                 const mostRecent = Math.max(...emps.map(e => e._addedAt));
                 return { name, emps, mostRecent };
             });
@@ -1347,7 +1348,7 @@
                 let bucketLabel = isAll ? 'Global Access (All Buckets)' : `Bucket: ${b.name}`;
                 let labelColor = isAll ? 'text-red-400' : 'text-indigo-400';
                 let iconColor = isAll ? 'text-red-500' : 'text-indigo-500';
-
+                
                 html += `
                     <tr class="bg-[#0f1423] border-y border-minio-border">
                         <td colspan="4" class="px-6 py-2.5">
@@ -1361,10 +1362,10 @@
                         </td>
                     </tr>
                 `;
-
+                
                 b.emps.forEach((emp, index) => {
                     let roleColor = emp.role === 'admin' ? 'bg-red-900/50 text-red-400' :
-                        emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' :
+                            emp.role === 'view_upload_delete' ? 'bg-green-900/50 text-green-400' : 
                             emp.role === 'view_upload' ? 'bg-indigo-900/50 text-indigo-400' : 'bg-blue-900/50 text-blue-400';
 
                     let roleName = emp.role || 'view_upload_delete';
@@ -1532,7 +1533,7 @@
             const url = s3.getSignedUrl('getObject', {
                 Bucket: activeBucket,
                 Key: selectedObjectKey,
-                Expires: 604800
+                Expires: 604800 
             });
 
             navigator.clipboard.writeText(url).then(() => {
