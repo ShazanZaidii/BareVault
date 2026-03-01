@@ -425,7 +425,7 @@ func main() {
     
     fmt.Printf("BAREVAULT ADMIN PORTAL\n")
     fmt.Printf("   Open this Site and Enter Credentials from below to LogIn as ADMIN\n")
-    fmt.Printf("   Portal    : https://shazanzaidii.github.io/barevault-web/\n")
+    fmt.Printf("   Portal    : https://shazanzaidii.github.io/Barevault/\n")
     fmt.Printf("\nADMIN CREDENTIALS (Login Using these as ADMIN)\n")
     fmt.Printf("   Endpoint  : %s\n", permanentApiURL)
     fmt.Printf("   Access Key: %s\n", profile.AccessKey)
